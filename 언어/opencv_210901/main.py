@@ -1,10 +1,12 @@
 import sys
 import Menu
+import Tensor
 import cv2
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5 import QtPrintSupport, QtCore
+from qt_material import apply_stylesheet
 
 class Qpixmap_App(QMainWindow):
     def __init__(self):
@@ -123,15 +125,17 @@ class Qpixmap_App(QMainWindow):
         self.createMenus()
 
         self.setWindowTitle('Image Viewer')
+        self.setFixedSize(1000, 600)
         self.move(100, 100)
+
+        self.Test = Tensor.TensorFlow()
+        self.Test.test_Display
 
     def initUI(self):
         self.CenterImage = Menu.CenterWidget()
         self.setCentralWidget(self.CenterImage)
 
-        self.menu_widget = self.CenterImage
-
-        self.setGeometry(10, 10, 1000, 600)
+        self.setGeometry(0, 0, 1000, 600)
         self.show()
 
     def open(self):
@@ -170,5 +174,6 @@ class Qpixmap_App(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+    apply_stylesheet(app, theme='light_blue.xml')
     ax = Qpixmap_App()
     sys.exit(app.exec_())

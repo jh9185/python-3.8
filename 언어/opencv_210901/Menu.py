@@ -12,36 +12,90 @@ class CenterWidget(QWidget):
                            "{\n"       
 	                       "     background:#FFFFFF;\n"
                            "}\n"
-                           "QPushButton \n"
+                           "QGroupBox \n"
                            "{\n"
-                           "  color:white;\n"
-                           "  background : rgb(58, 134, 255);\n"
-                           "  padding: 12;\n"
-                           "  border-radius: 5;\n"
+                           "     border: 1px solid balck;\n"
                            "}\n"
                            )
-
         # Image 관련 변수
         self.img_url = ''
+        self.img_ori  = np.zeros((100, 100), np.uint8)
         self.img_data = np.zeros((100, 100), np.uint8)
         self.img_obj = QPixmap()
         self.lb_img = QLabel()
         self.img_Threshold = 0
+        self.img_ratioX = -1
+        self.img_ratioY = -1
 
         self.grid = QGridLayout()
         self.ButtonMenu = self.ButtonGroup()
 
-        self.grid.addWidget(self.lb_img, 0, 0)
+        self.ScrollArea = QScrollArea(self)
+        self.ScrollArea.setStyleSheet("color:balck")
+        self.ScrollArea.setWidgetResizable(True)
+        self.ScrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.ScrollArea.setWidget(self.lb_img)
+
+        self.grid.addWidget(self.ScrollArea, 0, 0)
         self.grid.addWidget(self.ButtonMenu, 0, 1)
 
         self.grid.setColumnMinimumWidth(0, 700)
         self.grid.setColumnMinimumWidth(1, 200)
         self.setLayout(self.grid)
 
+        self.drawRoi = QRect()
+        self.Sx, self.Sy = -1, -1
+        self.Ex, self.Ey = -1, -1
+        self.lb_img.setMouseTracking(True)
         self.show()
 
+    def mousePressEvent(self, event):  #event : QMouseEvent
+        if event.buttons() & Qt.LeftButton:
+            print('BUTTON PRESS - LEFT')
+            self.Sx, self.Sy = event.x(), event.y()
+        if event.buttons() & Qt.MidButton:
+            print('BUTTON PRESS - MIDDLE')
+        if event.buttons() & Qt.RightButton:
+            print('BUTTON PRESS - RIGHT')
+
+    def mouseMoveEvent(self, event):  # event QMouseEvent
+        self.Ex, self.Ey = event.x(), event.y()
+        self.draw_rectangle()
+
+    def mouseReleaseEvent(self, event):
+        self.Ex, self.Ey = event.x(), event.y()
+        self.draw_rectangle()
+        print('BUTTON RELEASE')
+
+
+    # Mouse Callback함수 : 파라미터는 고정됨.
+    def draw_rectangle(self):
+        if (self.img_ratioX == -1) | (self.img_ratioY == -1):
+            return
+
+        Sx = self.Sx - 10
+        Ex = self.Ex - 10
+        Sy = self.Sy - 20
+        Ey = self.Ey - 20
+
+        if Ex > self.img_obj.width():
+            Ex = self.img_obj.width()
+
+        if Ey > self.img_obj.height():
+            Ey = self.img_obj.height()
+
+        self.drawRoi.left   = int((Sx * self.img_ratioX))
+        self.drawRoi.right  = int((Ex * self.img_ratioX))
+        self.drawRoi.top    = int(((Sy) * self.img_ratioY))
+        self.drawRoi.bottom = int(((Ey) * self.img_ratioY))
+
+        self.img_data = self.img_ori.copy()
+        cv2.rectangle(self.img_data, (self.drawRoi.left, self.drawRoi.top), (self.drawRoi.right, self.drawRoi.bottom), (0, 0, 255), 3)
+
+        self.Draw_Image(self.img_data)
+
     def ButtonGroup(self):
-        groupbox = QGroupBox('Buttons')
+        groupbox = QGroupBox()
 
         grid = QGridLayout()
         self.TopGroup = self.FilterGroup()
@@ -56,7 +110,7 @@ class CenterWidget(QWidget):
         return groupbox
 
     def FilterGroup(self):
-        groupbox = QGroupBox('Filter Group')
+        groupbox = QGroupBox()
 
         self.radio1 = QRadioButton('Original')
         self.radio2 = QRadioButton('Binary Filter')
@@ -97,10 +151,17 @@ class CenterWidget(QWidget):
 
     def Load_Draw_Image(self, image_path):
         self.img_data = cv2.imread(image_path)
+        self.img_ori = self.img_data
         self.binary_cv = cv2.imencode('.PNG', self.img_data)[1].tobytes()
         self.img_obj.loadFromData(self.binary_cv)
         self.img_obj = self.img_obj.scaledToWidth(700)
+        self.img_obj = self.img_obj.scaledToHeight(525)
         self.lb_img.setPixmap(self.img_obj)
+
+        imgY, imgX, imgCh = self.img_ori.shape
+        viewX, viewY = self.img_obj.width(), self.img_obj.height()
+        self.img_ratioX, self.img_ratioY = imgX / viewX, imgY / viewY
+        print(self.img_ratioX, self.img_ratioY)
 
     def Draw_Image(self, image):
         self.binary_cv = cv2.imencode('.bmp', image)[1].tobytes()
